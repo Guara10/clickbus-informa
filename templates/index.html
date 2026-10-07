@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClickBus Informa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/devices.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="app">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="brand" aria-label="ClickBus Informa">
+        <svg viewBox="0 0 408 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ClickBus Informa">
+          <use href="#logo-word"/>
+          <text x="272" y="62.5" fill="#A528FF" font-family="Inter, sans-serif" font-size="37" font-weight="700" letter-spacing="-1.6">informa</text>
+          <use href="#logo-swoosh"/>
+        </svg>
+      </div>
+      <button type="button" class="brand-mark" id="expand" title="Expandir menu lateral" aria-label="Expandir menu lateral">
+        <svg viewBox="0 0 62 52" width="19" height="19" aria-hidden="true"><use href="#logo-swoosh" fill="#A528FF"/></svg>
+      </button>
+      <div class="head-actions">
+        <button type="button" class="icon-btn" id="collapse" title="Recolher menu lateral" aria-label="Recolher menu lateral"></button>
+      </div>
+    </div>
+
+    <div class="mode-switch">
+      <div class="segmented" role="group" aria-label="Modo de navegação">
+        <button type="button" data-mode="gestao" aria-pressed="true" title="Gestão"></button>
+        <button type="button" data-mode="operacional" aria-pressed="false" title="Operacional"></button>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav"></nav>
+
+    <div class="sidebar-foot"><div class="demo"><b style="font-weight:400;color:#374151">Ambiente demo</b><br>Nenhum SMS real é enviado. Oracle e APIs simulados.</div></div>
+  </aside>
+
+  <!-- ===================== CONTEÚDO ===================== -->
+  <div class="content">
+    <header class="topbar">
+      <div class="history">
+        <button type="button" aria-label="Voltar" title="Voltar" onclick="history.back()"></button>
+        <button type="button" aria-label="Avançar" title="Avançar" onclick="history.forward()"></button>
+      </div>
+      <nav class="crumbs" aria-label="Trilha de navegação"><span class="mode" id="crumb-mode">Gestão</span><span class="sep"></span><span class="current"><span id="crumb-icon"></span><span id="crumb-label">Dashboard</span></span></nav>
+      <div class="actions">
+        <button type="button" class="icon-btn" aria-label="Buscar" title="Buscar" id="top-search"></button>
+        <button type="button" class="icon-btn rel" aria-label="Notificações" title="Notificações" id="top-bell"><span class="dot-badge"></span></button>
+        <span class="avatar" title="Ana Ribeiro (operadora)">AR</span>
+      </div>
+    </header>
+
+    <main>
+      <div class="container">
+
+        <!-- ===== GESTÃO · Dashboard ===== -->
+        <section class="view stack" data-view="dashboard">
+          <div class="grid grid-4" id="kpi-dashboard"></div>
+          <div class="grid grid-12 stretch">
+            <div class="col-8" id="mapa-dashboard"></div>
+            <div class="col-4" id="feed-dashboard"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="title" style="display:flex;align-items:center;gap:8px"><span data-icon="target" style="display:inline-flex;width:16px;height:16px;color:#6b7280"></span>Monitoramento de partidas</span>
+              <div class="tools"><div class="field"><span data-icon="search"></span><input class="input" id="busca-partidas" placeholder="Buscar partida" aria-label="Buscar partida" style="width:200px"></div><button type="button" class="btn">Filtros</button><button type="button" class="btn primary" id="btn-recalcular-motor" title="Reconsulta clima e trânsito reais e reavalia o risco de atraso de cada partida">Recalcular previsão (motor preditivo)</button><button type="button" class="btn" id="btn-motor-temporal" title="Cenário de demonstração: força clima severo nos destinos para mostrar o motor escalonando">Simular temporal</button></div>
+            </div>
+            <div class="card-body flush" id="tabela-partidas"></div>
+          </div>
+        </section>
+
+        <!-- ===== GESTÃO · Partidas ===== -->
+        <section class="view stack" data-view="departures">
+          <div class="grid grid-4" id="kpi-departures"></div>
+          <div class="card"><div class="card-head"><span class="title">Partidas por faixa de horário</span></div><div class="card-body"><div id="bars-departures"></div><p class="note">Pico às 16h com 7 partidas na faixa. Concentre operadores entre 15h e 18h.</p></div></div>
+          <div class="card"><div class="card-head"><span class="title">Monitoramento de partidas</span><div class="tools"><div class="field"><input class="input" id="busca-partidas-2" placeholder="Buscar partida" aria-label="Buscar partida" style="width:200px"></div></div></div><div class="card-body flush" id="tabela-partidas-2"></div></div>
+        </section>
+
+        <!-- ===== GESTÃO · Atrasos ===== -->
+        <section class="view stack" data-view="delays">
+          <div class="grid grid-4" id="kpi-delays"></div>
+          <div class="grid grid-12">
+            <div class="col-7 card"><div class="card-head"><span class="title">Partidas atrasadas</span></div><div class="card-body tight"><ul class="rows" id="lista-atrasos"></ul></div></div>
+            <div class="col-5 card"><div class="card-head"><span class="title">Causas dos atrasos</span></div><div class="card-body" id="causas-atrasos"></div></div>
+          </div>
+        </section>
+
+        <!-- ===== GESTÃO · Plataformas (cena do pitch) ===== -->
+        <section class="view" data-view="platforms">
+          <div class="grid grid-12">
+            <div class="col-8 stack">
+              <div class="card"><div class="card-head"><span class="title">Atribuição de plataformas</span></div><div class="card-body tight"><ul class="rows" id="lista-plataformas"></ul></div></div>
+              <div class="card"><div class="card-head"><span class="title">Avisos enviados</span></div><div class="card-body"><ul class="rows" id="hist-plataformas"><li class="muted small" style="border:0">Nenhum aviso ainda. Troque uma plataforma para disparar a notificação.</li></ul></div></div>
+            </div>
+            <div class="col-4 card">
+              <div class="card-head"><span class="title">App do passageiro</span></div>
+              <div class="card-body phone-wrap">
+                <div class="device device-iphone-14-pro device-spacegray">
+                  <div class="device-frame"><div class="device-screen" style="overflow:hidden"><div class="phone-app" id="phone-app"></div></div></div>
+                  <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
+                </div>
+                <p class="tiny muted" style="text-align:center;max-width:260px;margin-top:8px">Passagem de Marina Costa · Rio de Janeiro. Troque a plataforma ao lado e veja o SMS chegar. Abra também <a href="/passageiro" target="_blank" style="color:#a528ff">/passageiro</a> em outra janela.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== GESTÃO · Contatos (Oracle) ===== -->
+        <section class="view stack" data-view="contacts">
+          <div class="grid grid-4" id="kpi-contacts"></div>
+          <div class="card">
+            <div class="card-head"><span class="title">Contatos no Oracle Azure</span><div class="tools"><button type="button" class="btn" id="testDb">Testar conexão</button></div></div>
+            <div class="card-body flush" id="tabela-contatos"></div>
+          </div>
+          <p class="tiny muted">Pré-visualização de registros fictícios da tabela CONTATOS_USUARIOS. Nenhuma conexão real é realizada.</p>
+        </section>
+
+        <!-- ===== GESTÃO · Fontes de dados ===== -->
+        <section class="view stack" data-view="sources">
+          <div class="grid grid-4" id="kpi-sources"></div>
+          <div class="card"><div class="card-head"><span class="title">APIs e fontes públicas · Estado de São Paulo</span></div>
+            <div class="card-body"><div class="api-grid">
+              {% for api in apis %}<article class="api-card"><div class="top"><span class="ic">{{ api.tipo[0] }}</span><span class="chip {{ 'ok' if api.status == 'Disponivel' else 'warn' }}">{{ api.status }}</span></div><h4>{{ api.tipo }}</h4><div class="nm">{{ api.nome }}</div><div class="cv">{{ api.cobertura }}</div><code title="{{ api.url }}">{{ api.url }}</code></article>{% endfor %}
+            </div></div>
+          </div>
+        </section>
+
+        <!-- ===== OPERACIONAL · Ao vivo ===== -->
+        <section class="view stack" data-view="live">
+          <div class="live"><i></i>Monitoramento ao vivo · atualizado às <span id="relogio"></span></div>
+          <div class="grid grid-4" id="kpi-live"></div>
+          <div class="grid grid-12 stretch">
+            <div class="col-8" id="mapa-live"></div>
+            <div class="col-4" id="feed-live"></div>
+          </div>
+        </section>
+
+        <!-- ===== OPERACIONAL · Disparo de avisos (SMS) ===== -->
+        <section class="view stack" data-view="sms">
+          <div class="grid grid-4" id="kpi-sms"></div>
+          <div class="card">
+            <div class="card-head"><span class="title">Simulador de disparo por SMS</span><span class="chip muted">sandbox</span></div>
+            <div class="card-body">
+              <div class="compose">
+                <form id="smsForm">
+                  <div><span class="label">Categoria</span><div id="cb-categoria"></div></div>
+                  <div><span class="label">Município</span><div id="cb-cidade"></div></div>
+                  <div><span class="label">Mensagem</span><textarea class="input" id="mensagem" maxlength="160" placeholder="Ex.: ClickBus: sua viagem para Campinas (16:45) mudou para a plataforma 07."></textarea><div class="hint"><span id="count">0</span>/160 caracteres</div></div>
+                  <button class="btn primary" type="submit" style="justify-content:center">Simular envio SMS</button>
+                  <p class="tiny muted">Nenhum SMS real é enviado. O backend valida a mensagem e devolve um protocolo de simulação.</p>
+                </form>
+                <div class="phone-wrap" style="padding-top:0">
+                  <div class="device device-iphone-14-pro device-spacegray">
+                    <div class="device-frame"><div class="device-screen" style="overflow:hidden"><div class="phone-app">
+                      <div class="top"><div class="t1"><span>Mensagens</span><span data-icon="bell" style="display:inline-flex;width:16px;height:16px"></span></div><div class="t2">ClickBus</div><div class="t3">SMS · 40404</div></div>
+                      <div class="body"><div class="sms"><div class="lbl">Prévia da mensagem</div><div class="bubble" id="preview">Sua mensagem aparecerá aqui.</div></div></div>
+                    </div></div></div>
+                    <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card"><div class="card-head"><span class="title">Avisos enviados hoje</span></div><div class="card-body tight"><ul class="rows" id="lista-avisos"></ul></div></div>
+        </section>
+
+        <!-- ===== OPERACIONAL · Ocorrências ===== -->
+        <section class="view stack" data-view="incidents">
+          <div class="grid grid-4" id="kpi-incidents"></div>
+          <div class="card"><div class="card-head"><span class="title">Ocorrências do terminal</span><div class="tools"><div class="segmented small" id="filtro-oc"><button type="button" data-f="abertas" aria-pressed="true">Abertas</button><button type="button" data-f="resolvidas" aria-pressed="false">Resolvidas</button><button type="button" data-f="todas" aria-pressed="false">Todas</button></div></div></div><div class="card-body tight"><ul class="rows" id="lista-oc"></ul></div></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- logotipo ClickBus (marca de terceiro, peça de conceito acadêmico) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <path id="logo-word" fill="#1A1A1A" d="M179.142 56.241v-4.66h9.649c1.646 0 2.535.799 2.535 2.263 0 1.51-.889 2.397-2.535 2.397h-9.649zm-7.471 5.682h18.498c5.293 0 8.852-3.151 8.852-7.679 0-3.151-2.268-5.415-5.693-6.125 2.936-.666 4.625-2.841 4.625-5.904 0-3.728-3.07-6.392-8.673-6.392h-17.609v26.1zm7.471-15.846v-4.66h8.938c1.513 0 2.491.887 2.491 2.352 0 1.509-.978 2.308-2.491 2.308h-8.938zM216.274 62.5c8.849 0 13.476-4.35 13.476-11.807v-14.87h-7.65v14.781c0 3.063-2.267 5.016-5.826 5.016-3.691 0-5.782-1.953-5.782-5.016v-14.78h-7.647v14.869c0 7.457 5.203 11.807 13.429 11.807zm-163.91 0c7.648 0 12.896-4.04 13.385-11.008h-7.693c-.312 2.264-2.18 4.128-5.915 4.128-4.536 0-6.893-2.752-6.893-6.747 0-4.128 2.18-6.791 6.804-6.791 3.736 0 5.692 1.909 6.004 4.261h7.693c-.311-6.214-4.847-11.097-13.874-11.097-8.761 0-14.275 5.194-14.275 13.76 0 8.478 5.87 13.494 14.764 13.494zm195.039 0c8.449 0 12.585-3.24 12.585-8.478 0-4.572-2.934-7.28-9.026-8.078l-2.98-.4c-4.538-.621-6.092-.976-6.092-2.352 0-1.199 1.378-1.998 4.713-1.998 4.091 0 8.316.8 11.43 1.776v-6.037c-2.181-.888-6.095-1.687-10.719-1.687-8.494 0-12.895 3.196-12.895 8.434 0 4.794 3.467 7.146 9.428 8.078l3.156.488c4.046.622 5.424 1.11 5.424 2.264 0 1.11-1.11 2.042-4.535 2.042-4.224 0-8.938-1.11-12.897-2.752v6.347c2.98 1.243 7.294 2.353 12.408 2.353zm-170.714-.577h14.72v-6.347H79.312c-1.335 0-1.913-.577-1.913-1.91V35.824h-7.648V55c0 4.083 2.846 6.924 6.937 6.924zm19.967 0h7.648v-26.1h-7.648v26.1zm26.682.577c7.65 0 12.895-4.04 13.384-11.008h-7.691c-.313 2.264-2.181 4.128-5.916 4.128-4.535 0-6.892-2.752-6.892-6.747 0-4.128 2.178-6.791 6.805-6.791 3.735 0 5.69 1.909 6.003 4.261h7.691c-.31-6.214-4.845-11.097-13.873-11.097-8.762 0-14.276 5.194-14.276 13.76 0 8.478 5.872 13.494 14.765 13.494zm17.743-.577h7.471V53.8c1.691-.577 3.38-1.287 4.937-2.175 2.936 3.462 4.535 6.392 6.003 10.298h8.36c-1.466-4.883-5.114-11.274-8.581-14.426 3.556-3.151 6.224-7.057 7.691-11.674h-7.87c-1.378 4.306-5.424 8.745-10.54 10.875V35.823h-7.471v26.1z"/>
+    <path id="logo-swoosh" fill="#A528FF" d="M2.29 51.536h25.26c.666 0 1.11-.488 1.11-1.11v-1.109c0-14.514 8.583-22.637 23.793-22.637h94.988c.666 0 1.11-.444 1.11-1.11V1.734c0-.665-.444-1.11-1.11-1.11H47.694C19.856.625.334 17.315.334 41.062c0 3.684.177 6.658.622 9.233.133.754.534 1.242 1.334 1.242z"/>
+  </defs>
+</svg>
+
+<script>
+  // Dados vindos do backend Flask (simulados)
+  window.DADOS = {
+    terminal: {{ terminal|tojson }},
+    partidas: {{ partidas|tojson }},
+    contatos: {{ contatos|tojson }},
+    apis: {{ apis|tojson }},
+    ocorrencias: {{ ocorrencias|tojson }},
+    avisos: {{ avisos|tojson }},
+    totais: { contatos: {{ total }}, ativos: {{ ativos }}, atrasos: {{ atrasos }}, presentes: {{ presentes }}, ocupadas: {{ ocupadas }} }
+  };
+</script>
+<script src="{{ url_for('static', filename='vendor/leaflet.js') }}"></script>
+<script src="{{ url_for('static', filename='js/icons.js') }}"></script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

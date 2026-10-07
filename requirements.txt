@@ -1,0 +1,4 @@
+Flask==3.1.2
+requests==2.32.3
+python-dotenv==1.0.1
+# twilio==9.3.7   # descomente para enviar WhatsApp de verdade (ver .env.example)

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClickBus · Sua viagem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/devices.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="pass-page">
+    <div class="device device-iphone-14-pro device-spacegray">
+      <div class="device-frame"><div class="device-screen" style="overflow:hidden"><div class="phone-app" id="phone-app"></div></div></div>
+      <div class="device-stripe"></div><div class="device-header"></div><div class="device-sensors"></div><div class="device-btns"></div><div class="device-power"></div>
+    </div>
+  </div>
+  <script>window.DADOS = { terminal: {{ terminal|tojson }}, partidas: [{{ partida|tojson }}], contatos: [], apis: [], ocorrencias: [], avisos: [], totais: {} };</script>
+  <script src="{{ url_for('static', filename='js/icons.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/live.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+  <script>
+    // Reaproveita o mesmo celular do painel, só que em tela cheia
+    (function(){
+      const PASSAGEM = { id: '#1042', passageiro: 'Marina Costa', origem: 'São Paulo · Tietê', destino: 'Rio de Janeiro', viacao: 'Cometa', horario: '16:40', poltrona: '14A' };
+      const el = document.getElementById('phone-app');
+      let atual = LIVE.ler()[PASSAGEM.id] || '{{ partida.plataforma }}', mensagens = [];
+      const render = (hot=false, aviso=null) => {
+        el.innerHTML = `
+          <div class="top"><div class="t1"><span>ClickBus</span>${ICON('bell')}</div><div class="t2">Sua viagem</div><div class="t3">${PASSAGEM.passageiro}</div></div>
+          <div class="alert ${aviso?'on':''} ${hot?'hot':''}">${ICON('pin')}<span>${aviso||''}</span></div>
+          <div class="body">
+            <div class="line">${ICON('bus')}${PASSAGEM.viacao} · ${PASSAGEM.id}</div>
+            <div class="city">${PASSAGEM.origem}</div><div class="to">para</div><div class="city">${PASSAGEM.destino}</div>
+            <div class="facts"><div><p>Horário</p><b>${PASSAGEM.horario}</b></div><div><p>Poltrona</p><b>${PASSAGEM.poltrona}</b></div><div><p>Plataforma</p><b class="${hot?'hot':''}">${atual}</b></div></div>
+            ${mensagens.length ? `<div class="sms"><div class="lbl">SMS recebido</div>${mensagens.map((m,i)=>`<div class="bubble ${i===0&&hot?'new':''}">${m}</div>`).join('')}</div>` : `<div class="qr">${ICON('qr')}<div><div class="a">Embarque</div><div class="b">Apresente este código na plataforma ${atual}</div></div></div>`}
+          </div>`;
+      };
+      LIVE.assinar((m, alt) => { const nova = m[PASSAGEM.id]; if (!nova) return; const mudou = nova !== atual; if (alt && alt.sms && alt.id === PASSAGEM.id && !mensagens.includes(alt.sms)) mensagens = [alt.sms, ...mensagens].slice(0, 2); if (!mudou && !(alt && alt.sms)) return; atual = nova; render(true, `Sua plataforma mudou para ${nova}`); clearTimeout(window._pt); window._pt = setTimeout(() => render(false, `Sua plataforma mudou para ${nova}`), 2600); });
+      render();
+    })();
+  </script>
+</body>
+</html>
